@@ -1,0 +1,429 @@
+var ascStr, ascInt, ascBool, ascDbl ,ascByte, ascDate, ascTime;
+var tbody, rows;
+var rlen, filtered_rows;
+var arr_pos;
+var current_page, pages, limit, end;
+var has_filter = false;
+var assettypes = '';
+var ring = '';
+var date = '';
+var send = '';
+var base_url = '';
+	
+// both window.onload and addEventListener('readystatechange', function()) initialize js
+window.onload = function(){
+};
+
+document.addEventListener('readystatechange', function() {
+	if (document.readyState === 'complete') 
+	{
+		ascStr = 1,
+		ascInt = 1,
+		ascBool = 1,
+		ascDbl = 1,
+		ascByte = 1,
+		ascDate = 1,
+		ascTime = 1;
+		
+		tbody = document.getElementById('tbody');
+		rows = tbody.rows;
+		
+		rlen = tbody.rows.length;
+		filtered_rows = 0;
+		
+		arr_pos = new Array();
+		
+		current_page = 1;
+		limit = document.getElementById('limit-hidden').innerHTML;
+		pages = document.getElementById('pages-hidden').innerHTML;
+				
+		if(rlen >= limit)
+			end = current_page * limit;
+		else
+			end = rlen;
+		
+		document.getElementsByName('page1')[0].className = "current";
+		document.getElementsByName('page1')[1].className = "current";
+		
+		buildURL();
+						
+		//tableFilter.init();
+	}
+});
+
+// table filter for multiple inputs/tables
+var tableFilter = (function(Arr){
+	var _input;
+	
+	function _onInputEvent(e){
+		_input = e.target;
+		
+		var tables = document.getElementsByClassName(_input.getAttribute('data-table'));
+		Arr.forEach.call(tables, function(table){
+			Arr.forEach.call(table.tBodies, function(tbody){
+				Arr.forEach.call(tbody.rows, _filter);
+			});
+		});
+	}
+	
+	function _filter(row){
+		var text = row.textContent.toLowerCase(),
+			val = _input.value.toLowerCase();
+		
+		row.style.display = text.indexOf(val) === -1 ? 'none' : 'table-row';
+	}
+	
+	return {
+		init: function() {
+			var inputs = document.getElementsByClassName('filterTable');
+			Arr.forEach.call(inputs, function(input) {
+				input.oninput = _onInputEvent;
+			});
+		}
+	};
+})(Array.prototype);
+
+
+function filterTable(){
+	var text, i, input, val;
+	var navigation_a, navigation_b;	
+	var has_filter = false;
+		
+	input = document.getElementById('filterTable');
+	val = input.value.toLowerCase();
+		
+	navigation_a = document.getElementsByClassName("navig")[0];
+	navigation_b = document.getElementsByClassName("navig")[1];
+	navigation_a.innerHTML = '';
+	navigation_b.innerHTML = '';
+	
+	arr_pos = [];
+	filtered_rows = 0;
+	filtered_pages = 0;
+
+	if(val != '')
+	{		
+		for(i = 0; i < rlen; i++)
+		{
+			rows[i].style.display = 'none';
+			text = rows[i].textContent.toLowerCase();
+						
+			if(text.indexOf(val) === -1)
+				rows[i].style.display = 'none';
+				
+			else
+			{
+				arr_pos[filtered_rows++] = i;
+				
+				//only display first page
+				if(filtered_rows <= limit)
+					rows[i].style.display = 'table-row'; 
+			}		
+		}
+		
+	    filtered_pages = Math.ceil(filtered_rows/limit);
+		current_page = 1;
+		end = filtered_rows < limit ? filtered_rows : current_page * limit;
+				
+		for(var page = 1; page <= filtered_pages; page++)
+		{
+			navigation_a.innerHTML += '<a name="page'+ page +'" class="" onclick="navigate('+ limit + ',' + page + ',' + filtered_pages + ',' + filtered_rows + ');">'+ page +'</a>';
+			navigation_b.innerHTML += '<a name="page'+ page +'" class="" onclick="navigate('+ limit + ',' + page + ',' + filtered_pages + ',' + filtered_rows + ');">'+ page +'</a>';
+		}
+		
+		document.getElementsByClassName("per_page")[0].innerHTML = ((current_page - 1)*limit + 1) + " la " + end + " din " + filtered_rows;
+		document.getElementsByClassName("per_page")[1].innerHTML = ((current_page - 1)*limit + 1) + " la " + end + " din " + filtered_rows;
+
+		document.getElementsByName('page1')[0].className = "current";
+		document.getElementsByName('page1')[1].className = "current";
+		
+		has_filter = true;
+	}
+	
+	else
+	{
+		if(has_filter){
+			end = limit;
+			if(rlen < limit)
+				end = rlen;
+		}
+		
+		for(i = 0; i < rlen; i++)
+			rows[i].style.display = "none";
+		
+		for(i = (current_page-1) * limit; i < end; i++)
+		{
+			rows[i].style.display = "table-row";
+		}
+		
+		for(var page = 1; page <= pages; page++)
+		{
+			navigation_a.innerHTML += '<a name="page'+ page +'" class="" onclick="navigate('+ limit + ',' + page + ',' + pages + ',' + filtered_rows + ');">'+ page +'</a>';
+			navigation_b.innerHTML += '<a name="page'+ page +'" class="" onclick="navigate('+ limit + ',' + page + ',' + pages + ',' + filtered_rows + ');">'+ page +'</a>';
+		
+			document.getElementsByName('page'+page)[0].className = "";
+			document.getElementsByName('page'+page)[1].className = "";
+		}
+		
+		document.getElementsByClassName("per_page")[0].innerHTML = ((current_page - 1)*limit + 1) + " la " + end + " din " + rlen;
+		document.getElementsByClassName("per_page")[1].innerHTML = ((current_page - 1)*limit + 1) + " la " + end + " din " + rlen;
+		
+		document.getElementsByName('page1')[0].className = "current";
+		document.getElementsByName('page1')[1].className = "current";
+		
+	}
+	
+}
+
+
+function sortTable(tbody, col, asc){
+	var rows = tbody.rows,
+		arr = new Array(),
+		i, j, cells, clen;
+	
+	if(arr_pos.length > 0)
+	{
+		end = current_page * limit < arr_pos.length ? current_page * limit : arr_pos.length;
+		
+		for(i = (current_page - 1) * limit; i < end; i++)
+		{
+			cells = rows[arr_pos[i]].cells;
+			clen = cells.length;
+			arr[i] = new Array();
+			for(j = 0; j < clen; j++)
+				arr[i][j] = cells[j].innerHTML;
+		}
+		
+		var isaNum = true;
+		for(i = (current_page - 1) * limit; i < end; i++)
+		{
+			if(isNaN(arr[i][col]))
+				isaNum = false;
+		}
+		
+		if(isaNum)
+		{
+			arr.sort(function (a, b) {
+				return (a[col] - b[col]) > 0 ? asc : -1 * asc;
+			});
+		}
+		else
+		{
+			arr.sort(function (a, b) {
+				return (a[col] == b[col]) ? 0 : ((a[col] > b[col]) ? asc : -1 * asc);	
+			});
+		}
+		
+		j = 0;
+		for(i = (current_page - 1) * limit; i < end; i++){
+	        rows[arr_pos[i]].innerHTML = "<td>" + arr[j++].join("</td><td>") + "</td>";
+	    }
+	}
+	
+	else
+	{ 
+		for(i = (current_page - 1) * limit; i < end; i++)
+		{
+			cells = rows[i].cells;
+			clen = cells.length;
+			arr[i] = new Array();
+			for(j = 0; j < clen; j++)
+				arr[i][j] = cells[j].innerHTML;	
+		}
+		
+		var isaNum = true;
+		for(i = (current_page - 1) * limit; i < end; i++)
+		{
+			if(isNaN(arr[i][col]))
+				isaNum = false;
+		}
+		
+		if(isaNum)
+		{
+			arr.sort(function (a, b) {
+				return (a[col] - b[col]) > 0 ? asc : -1 * asc;
+			});
+		}
+		else
+		{
+			arr.sort(function (a, b) {
+				return (a[col] == b[col]) ? 0 : ((a[col] > b[col]) ? asc : -1 * asc);	
+			});
+		}
+				
+		j = 0;
+		for(i = (current_page - 1) * limit; i < end; i++){
+	        rows[i].innerHTML = "<td>" + arr[j++].join("</td><td>") + "</td>";
+	    }
+	}
+}
+
+function navigate(lim, page, pgs, filtered_rows){
+	var i;
+	
+	limit = lim;
+	current_page = page;
+	end = page * lim;
+		
+	if(arr_pos.length > 0)
+	{ 	
+		if(page == pgs)
+			end = arr_pos.length;
+		
+		for(i = 0; i < rlen; i++)
+			rows[i].style.display = "none";
+		
+		for(i = (page-1) * limit; i < end; i++)
+		{
+			rows[arr_pos[i]].style.display = "table-row";
+		}
+		
+		document.getElementsByClassName("per_page")[0].innerHTML = ((current_page - 1)*limit + 1) + " la " + end + " din " + arr_pos.length;
+		document.getElementsByClassName("per_page")[1].innerHTML = ((current_page - 1)*limit + 1) + " la " + end + " din " + arr_pos.length;
+	}
+		
+	else
+	{
+		if(page == pgs)
+			end = rlen;
+		
+		for(i = 0; i < rlen; i++)
+			rows[i].style.display = "none";
+		
+		for(i = (page-1) * limit; i < end; i++)
+		{
+			rows[i].style.display = "table-row";
+		}
+		
+		document.getElementsByClassName("per_page")[0].innerHTML = ((current_page - 1)*limit + 1) + " la " + end + " din " + rlen;
+		document.getElementsByClassName("per_page")[1].innerHTML = ((current_page - 1)*limit + 1) + " la " + end + " din " + rlen;
+	}
+	
+	for(i = 1; i <= pgs; i++)
+	{
+		document.getElementsByName('page'+i)[0].className = "";
+		document.getElementsByName('page'+i)[1].className = "";
+	}
+
+	document.getElementsByName('page'+page)[0].className = "current";
+	document.getElementsByName('page'+page)[1].className = "current";	
+}
+
+function toggleArchive(x){
+	if(x.checked)
+	{
+		/*document.getElementById('ringS').style.display = "block";
+		document.getElementById('datepickerwell').style.display = "block";
+		document.getElementById('send').style.display = "block";*/
+		document.getElementById('hidenfields').style.display = "block";
+		document.getElementsByClassName('table')[0].style.top = "32px";
+		document.getElementById('bottom').style.top = "32px";		
+	}
+	else
+	{
+		/*document.getElementById('ringS').style.display = "none";
+		document.getElementById('datepickerwell').style.display = "none";
+		document.getElementById('send').style.display = "none";*/
+		document.getElementById('hidenfields').style.display = "none";
+
+		document.getElementsByClassName('table')[0].style.top = "0px";
+		document.getElementById('bottom').style.top = "0px";
+	}
+}
+
+function callback(){
+	var r = document.getElementById('ringSelector');
+	var s = r.options[r.selectedIndex].text;
+	var d = document.getElementById('reservation').value;
+	var url = document.getElementById('webservurl').innerHTML;
+	
+	var xmlHttp = null;
+	
+	if(window.XMLHttpRequest)
+		xmlHttp = new XMLHttpRequest();
+
+	else if(window.ActiveXObject)
+		xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
+	
+	if(xmlHttp == null)
+	{
+		alert ("Your browser does not support Ajax");
+		return false;
+	}
+	
+	var data = '{' +
+			   ' "SessionId": "4", ' +
+			   ' "CurrentState": "login", ' +
+			   ' "objects": ' +
+			   '[' +
+					'{' +
+						' "Arguments": ' +
+						'{' +
+						' "ID_Market": 3, ' +
+						' "ID_Ring": ' +
+						' "date": ' +
+						'}' +
+					 '}' +
+				']' +
+				'}';
+	
+	xmlHttp.onreadystatechange = stateChanged;
+	xmlHttp.open("POST", url, true);
+	//xmlHttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+	xmlHttp.send(data);
+	//alert("xmlHttp.readyState: " + xmlHttp.readyState);
+	
+	function stateChanged()
+	{
+		if(xmlHttp.readyState < 4)
+			document.getElementById('loading').innerHTML = xmlHttp.readyState;
+		
+		else if (xmlHttp.readyState === 4 || xmlHttp.readyState == 'complete')
+		{
+			document.getElementById('loading').innerHTML = xmlHttp.status;
+			if(xmlHttp.status == 200)
+			{
+				document.getElementById("loading").innerHTML = JSON.parse(xmlHttp.responseText);
+				alert(JSON.parse(xmlHttp.responseText));
+			}
+			//alert(JSON.parse(xmlHttp.responseText));
+		}
+	}	
+}
+
+function buildURL(){
+	var r = '';
+	if(document.getElementById('ringSelector') != null)
+	{
+		r = document.getElementById('ringSelector');
+		var r_id = '';
+		if(r != null && r != '') r_id = r.options[r.selectedIndex].value;
+		if(r_id == 0) r_id = -1;
+		//alert(r_id);
+		var d = document.getElementById('reservation').value;
+		//alert(d);
+		arr = d.split(" ");
+		date_start = arr[0].trim();
+		date_end = arr[2].trim();
+		
+		//var send = document.getElementById('send');
+	
+		ring = '&id_ring=' + r_id;
+	    date = '&date_start=' + date_start + '&date_end=' + date_end;
+	    
+	    send = '';
+	    base_url = document.getElementById('base_url').href;
+	    //alert(base_url);
+	    send = base_url += ring += date;
+	    //alert(send);
+	    
+	    //send.href = base_url;
+	    
+	    document.getElementById('send').href = send;
+	}
+   // alert(send.href);
+    
+	//send.href += ring;
+	//send.href += date;
+    
+}

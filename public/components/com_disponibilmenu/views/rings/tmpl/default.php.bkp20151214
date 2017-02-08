@@ -1,0 +1,45 @@
+<?php
+// No direct access to this file
+defined('_JEXEC') or die('Restricted access');
+?>
+
+<?php
+$rings = [];
+foreach($this->msg['Result'] as $row){
+	//var_dump($row);
+	if(gettype($row) == 'array'){
+		foreach($row as $key => $ring){
+			if(sizeof($ring) == 3){
+				$rings[$ring['ID']] = $ring['Denumire Ring'];
+				//var_dump($ring);
+			}
+		}
+	}
+}
+
+asort($rings);
+?>
+<table id="all_rings">
+<tbody>
+<td class="otherRingsTitle">Ringuri</td>
+<td class="all_rings">
+<?php foreach($rings as $id => $ring){ ?>
+	<a style="color:#0AA699" href="index.php?option=com_disponibilmenu&view=ringdetails&id=<?php echo $id;?>"><?php echo $ring;?></a>
+	<span style="color:#333">|</span>
+<?php }?>
+</td>
+</tbody>
+</table>
+
+<?php
+/*$df = new disponibilFunctionsF('rings', $this->msg['Result'], $this->itemsperpage);
+
+echo'<div class="filpag">';
+$df->renderFilter();
+$df->renderPagination('top');
+echo'</div>';
+
+$df->renderGrid();
+
+$df->renderPagination('bottom');*/
+

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="module" version="3.1.0" client="site" method="upgrade">
+    <name>Disponibil Main</name>
+    <author>Ghergic Raul</author>
+    <version>1.0.0</version>
+    <description>Main page module for disponibil.ro</description>
+    <files>
+        <filename>mod_disponibilmain.xml</filename>
+        <filename module="mod_disponibilmain">mod_disponibilmain.php</filename>
+        <filename>index.html</filename>
+        <filename>helper.php</filename>
+        <filename>tmpl/default.php</filename>
+        <filename>tmpl/index.html</filename>
+    </files>
+    <config>
+    <fields name="params">
+    	<fieldset name="advanced">
+    		<field type="text" name="top" label="Top"></field>
+    		<field type="text" name="right" label="Right"></field>  
+    	</fieldset>
+    </fields>
+    </config>
+</extension>
